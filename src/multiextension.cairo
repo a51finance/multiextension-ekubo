@@ -15,7 +15,8 @@ pub trait IMultiextension<TContractState> {
 
 #[starknet::contract]
 pub mod Multiextension {
-    use core::starknet::storage::{Vec, StoragePointerReadAccess, StoragePointerWriteAccess};
+    use starknet::{ContractAddress};
+    use starknet::storage::{Vec, StoragePointerReadAccess, StoragePointerWriteAccess};
     use ekubo::interfaces::core::{
         ICoreDispatcher, ICoreDispatcherTrait, IExtension, SwapParameters, UpdatePositionParameters,
     };
@@ -83,7 +84,7 @@ pub mod Multiextension {
     }
 
     #[abi(embed_v0)]
-    impl OracleExtension of IExtension<ContractState> {
+    impl EkuboMultiextension of IExtension<ContractState> {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
