@@ -1,0 +1,1 @@
+pub const MAX_EXTENSIONS_COUNT: u32 = 16;

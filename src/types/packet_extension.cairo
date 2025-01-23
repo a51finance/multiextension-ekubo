@@ -1,7 +1,6 @@
 use starknet::{ContractAddress};
 
-// Tick bounds for a position
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, starknet::Store)]
 pub struct PacketExtension {
     pub extension: ContractAddress,
     pub extensionQueue: u32,

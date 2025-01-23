@@ -1,10 +1,11 @@
+// use ekubo_multiextension::multiextension::IMultiextensionDispatcherTrait;
 use ekubo::interfaces::core::ICoreDispatcherTrait;
 use starknet::{contract_address_const, ContractAddress};
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 
 // use ekubo_multiextension::multiextension::IMultiextensionSafeDispatcher;
 // use ekubo_multiextension::multiextension::IMultiextensionSafeDispatcherTrait;
-// use ekubo_multiextension::multiextension::IMultiextensionDispatcher;
+use ekubo_multiextension::multiextension::IMultiextensionDispatcher;
 // use ekubo_multiextension::multiextension::IMultiextensionDispatcherTrait;
 
 use ekubo::interfaces::core::{ICoreDispatcher};
@@ -31,7 +32,7 @@ fn setup() -> ContractAddress {
 
 #[test]
 #[fork("mainnet")]
-fn test_increase_balance() {
+fn test_init() {
     let multiextension_address = setup();
     assert_eq!(
         ekubo_core().get_call_points(multiextension_address),
@@ -48,3 +49,25 @@ fn test_increase_balance() {
     )
 }
 
+#[test]
+#[fork("mainnet")]
+fn test_set_call_points() {
+    let multiextension_address = setup();
+    let multiextension_contract = IMultiextensionDispatcher {
+        contract_address: multiextension_address,
+    };
+    multiextension_contract.set_points();
+    assert_eq!(
+        ekubo_core().get_call_points(multiextension_address),
+        CallPoints {
+            before_initialize_pool: false,
+            after_initialize_pool: true,
+            before_swap: true,
+            after_swap: true,
+            before_update_position: true,
+            after_update_position: true,
+            before_collect_fees: true,
+            after_collect_fees: false,
+        },
+    )
+}
