@@ -1,1 +1,7 @@
 pub const MAX_EXTENSIONS_COUNT: u32 = 16;
+
+pub const EXTENSION_COUNT_MASK: u32 = 0xF0000;
+
+pub const EXTENSION_BIT_MASK: u32 = 0x0FFFF;
+
+pub const EXTENSION_COUNT_MASK_SIZE: u8 = 4;

@@ -1,6 +1,5 @@
 use starknet::{ContractAddress};
 
-// Tick bounds for a position
 #[derive(Copy, Drop, Serde)]
 pub struct AcceptedMethod {
     pub extension: ContractAddress,

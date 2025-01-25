@@ -1,15 +1,19 @@
-// use ekubo_multiextension::multiextension::IMultiextensionDispatcherTrait;
-use ekubo::interfaces::core::ICoreDispatcherTrait;
-use starknet::{contract_address_const, ContractAddress};
+use ekubo_multiextension::multiextension::IMultiextensionDispatcherTrait;
+use starknet::{contract_address_const, get_contract_address, ContractAddress};
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 
+use ekubo::interfaces::core::{ICoreDispatcherTrait, ICoreDispatcher};
+use ekubo::types::call_points::{CallPoints};
+use ekubo::types::keys::{PoolKey};
+use ekubo::types::i129::{i129};
+use ekubo_multiextension::types::init_params::MultiextensionInitParams;
+use ekubo_multiextension::types::packet_extension::PacketExtension;
 // use ekubo_multiextension::multiextension::IMultiextensionSafeDispatcher;
 // use ekubo_multiextension::multiextension::IMultiextensionSafeDispatcherTrait;
 use ekubo_multiextension::multiextension::IMultiextensionDispatcher;
 // use ekubo_multiextension::multiextension::IMultiextensionDispatcherTrait;
+use ekubo_multiextension::mock::token::{IERC20Dispatcher};
 
-use ekubo::interfaces::core::{ICoreDispatcher};
-use ekubo::types::call_points::{CallPoints};
 
 fn ekubo_core() -> ICoreDispatcher {
     ICoreDispatcher {
@@ -19,23 +23,77 @@ fn ekubo_core() -> ICoreDispatcher {
     }
 }
 
-fn deploy_multiextension(core: ICoreDispatcher) -> ContractAddress {
-    let contract = declare("Multiextension").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![core.contract_address.into()]).unwrap();
+fn default_owner() -> ContractAddress {
+    contract_address_const::<0xdeadbeefdeadbeef>()
+}
+
+fn deploy_token() -> IERC20Dispatcher {
+    let contract_class = declare("Token").unwrap().contract_class();
+    let recipient = get_contract_address();
+    let amount: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    let (contract_address, _) = contract_class
+        .deploy(@array![recipient.into(), amount.low.into(), amount.high.into()])
+        .expect('Deploy token failed');
+
+    IERC20Dispatcher { contract_address }
+}
+
+
+fn deploy_multiextension(params: MultiextensionInitParams) -> IMultiextensionDispatcher {
+    let contract_class = declare("Multiextension").unwrap().contract_class();
+    let init_params = array![
+        params.core.contract_address.into(), params.init_timeout.into(), params.owner.into(),
+    ];
+    let (contract_address, _) = contract_class
+        .deploy(@init_params)
+        .expect('Deploy multiextension failed');
+    IMultiextensionDispatcher { contract_address }
+}
+
+fn deploy_mockextension(name: ByteArray) -> ContractAddress {
+    let contract_class = declare(name).unwrap().contract_class();
+    let (contract_address, _) = contract_class
+        .deploy(@array![])
+        .expect('Deploy mockextension failed');
     contract_address
 }
 
-fn setup() -> ContractAddress {
-    let contract_address = deploy_multiextension(ekubo_core());
-    contract_address
+fn get_ekubo_pool_key(extension: ContractAddress) -> PoolKey {
+    let (tokenA, tokenB) = (deploy_token(), deploy_token());
+    let (token0, token1) = if tokenA.contract_address < tokenB.contract_address {
+        (tokenA, tokenB)
+    } else {
+        (tokenB, tokenA)
+    };
+
+    let pool_key = PoolKey {
+        token0: token0.contract_address,
+        token1: token1.contract_address,
+        fee: 0,
+        tick_spacing: 354892,
+        extension,
+    };
+
+    pool_key
+}
+
+fn setup() -> (IMultiextensionDispatcher, PoolKey) {
+    let init_params = MultiextensionInitParams {
+        core: ekubo_core(), init_timeout: 100, owner: default_owner(),
+    };
+
+    let multiextension = deploy_multiextension(init_params);
+    let pool_key = get_ekubo_pool_key(multiextension.contract_address);
+
+    (multiextension, pool_key)
 }
 
 #[test]
 #[fork("mainnet")]
 fn test_init() {
-    let multiextension_address = setup();
+    let (multiextension, pool_key) = setup();
     assert_eq!(
-        ekubo_core().get_call_points(multiextension_address),
+        ekubo_core().get_call_points(pool_key.extension),
         CallPoints {
             before_initialize_pool: true,
             after_initialize_pool: true,
@@ -46,28 +104,23 @@ fn test_init() {
             before_collect_fees: true,
             after_collect_fees: true,
         },
-    )
-}
+    );
 
-#[test]
-#[fork("mainnet")]
-fn test_set_call_points() {
-    let multiextension_address = setup();
-    let multiextension_contract = IMultiextensionDispatcher {
-        contract_address: multiextension_address,
-    };
-    multiextension_contract.set_points();
-    assert_eq!(
-        ekubo_core().get_call_points(multiextension_address),
-        CallPoints {
-            before_initialize_pool: false,
-            after_initialize_pool: true,
-            before_swap: true,
-            after_swap: true,
-            before_update_position: true,
-            after_update_position: true,
-            before_collect_fees: true,
-            after_collect_fees: false,
+    let (mockExtensionOne, mockExtensionTwo) = (
+        deploy_mockextension("MockextensionOne"), deploy_mockextension("MockextensionTwo"),
+    );
+    let extensions = array![
+        PacketExtension {
+            extension: mockExtensionOne, extensionQueue: 200, extensionDataDist: 100,
         },
-    )
+        PacketExtension {
+            extension: mockExtensionTwo, extensionQueue: 200, extensionDataDist: 100,
+        },
+    ];
+
+    multiextension
+        .init_extensions(extensions, 389180678745591968580628335859831605021785274946596863467520);
+
+    ekubo_core().initialize_pool(pool_key, i129 { mag: 100, sign: false });
+    // print!("ab = {}",ab);
 }
