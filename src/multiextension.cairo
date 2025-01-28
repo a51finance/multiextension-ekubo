@@ -19,8 +19,10 @@ pub trait IMultiextension<TContractState> {
 
 #[starknet::contract]
 pub mod Multiextension {
+    use core::num::traits::{Pow};
+    use core::dict::{Felt252Dict};
     use starknet::event::EventEmitter;
-    use starknet::{ContractAddress, get_block_timestamp};
+    use starknet::{ContractAddress, get_block_timestamp, contract_address_const};
     use starknet::storage::{
         Map, Mutable, StorageBase, StoragePointerWriteAccess, StoragePointerReadAccess,
         StoragePathEntry,
@@ -37,7 +39,15 @@ pub mod Multiextension {
     use ekubo::types::keys::{PoolKey};
     use ekubo_multiextension::types::init_params::MultiextensionInitParams;
     use ekubo_multiextension::errors::Errors;
-    use ekubo_multiextension::constants::{MAX_EXTENSIONS_COUNT};
+    use ekubo_multiextension::constants::{
+        MAX_EXTENSIONS_COUNT, BEFORE_INIT_POOL_BIT_SHIFT, AFTER_INIT_POOL_BIT_SHIFT,
+        BEFORE_SWAP_BIT_SHIFT, AFTER_SWAP_BIT_SHIFT, BEFORE_UPDATE_POSITION_BIT_SHIFT,
+        AFTER_UPDATE_POSITION_BIT_SHIFT, BEFORE_COLLECT_FEES_BIT_SHIFT,
+        AFTER_COLLECT_FEES_BIT_SHIFT, BEFORE_INIT_POOL_QUEUE_BIT_SHIFT,
+        AFTER_INIT_POOL_QUEUE_BIT_SHIFT, BEFORE_SWAP_QUEUE_BIT_SHIFT, AFTER_SWAP_QUEUE_BIT_SHIFT,
+        BEFORE_UPDATE_POSITION_QUEUE_BIT_SHIFT, AFTER_UPDATE_POSITION_QUEUE_BIT_SHIFT,
+        BEFORE_COLLECT_FEES_QUEUE_BIT_SHIFT, AFTER_COLLECT_FEES_QUEUE_BIT_SHIFT,
+    };
 
     use super::{PacketExtension, IMultiextension};
 
@@ -95,8 +105,8 @@ pub mod Multiextension {
         self._set_call_points();
     }
 
-    fn get_queue_position(extension_queue: u8, bit_shift: u8) -> u8 {
-        0
+    fn get_queue_position(extension_queue: u32, bit_shift: u32) -> u32 {
+        (extension_queue / bit_shift) & 0xF
     }
 
     #[generate_trait]
@@ -135,9 +145,29 @@ pub mod Multiextension {
         }
 
         fn _get_activated_extensions(
-            self: @ContractState, activated_extenions: u256, bit_shift: u8, queue_bit_shift: u8,
-        ) -> Array<PacketExtension> {
-            array![]
+            self: @ContractState,
+            ref active_extensions: Felt252Dict<felt252>,
+            bit_shift: u256,
+            queue_bit_shift: u32,
+        ) -> u8 {
+            let extension_info = (self.activated_extensions.read() / bit_shift) & 0xFFFFF;
+            let extension_count: u8 = ((extension_info / 0x10000) & 0xF).try_into().unwrap();
+            let extension_flags = extension_info & 0x0FFFF;
+
+            for index in 0..extension_count {
+                active_extensions.insert(index.into(), contract_address_const::<0>().into());
+            };
+
+            for index in 0..self.extension_count.read() {
+                let flag_check = 1 * 2_u256.pow(15 - index); //TODO: check gas
+                if ((extension_flags & flag_check) != 0) {
+                    let packet = self.extensions.entry(index).read();
+                    let queue_position = get_queue_position(packet.extensionQueue, queue_bit_shift);
+                    active_extensions.insert(queue_position.into(), packet.extension.into());
+                }
+            };
+
+            extension_count
         }
     }
 
@@ -148,7 +178,7 @@ pub mod Multiextension {
             init_extensions: Array<PacketExtension>,
             init_activated_extensions: u256,
         ) {
-            self.require_owner();
+            // self.require_owner();
             self._set_extensions(init_extensions.span(), self.extensions);
             self.activated_extensions.write(init_activated_extensions);
             self.extension_count.write(init_extensions.len());
@@ -228,18 +258,40 @@ pub mod Multiextension {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            let packet_one = self.extensions.entry(0).read();
-            IExtensionDispatcher { contract_address: packet_one.extension }
-                .before_initialize_pool(caller, pool_key, initial_tick);
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    BEFORE_INIT_POOL_BIT_SHIFT,
+                    BEFORE_INIT_POOL_QUEUE_BIT_SHIFT,
+                );
 
-            let packet_two = self.extensions.entry(1).read();
-            IExtensionDispatcher { contract_address: packet_two.extension }
-                .before_initialize_pool(caller, pool_key, initial_tick);
+            for index in 0..extensions_count {
+                let contract_address: ContractAddress = active_extensions
+                    .get(index.into())
+                    .try_into()
+                    .unwrap();
+
+                IExtensionDispatcher { contract_address }
+                    .before_initialize_pool(caller, pool_key, initial_tick);
+            };
         }
 
         fn after_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
-        ) { // assert(false, 'Call point not used');
+        ) {
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    AFTER_INIT_POOL_BIT_SHIFT,
+                    AFTER_INIT_POOL_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }
+                    .after_initialize_pool(caller, pool_key, initial_tick);
+            }
         }
 
         fn before_swap(
@@ -248,7 +300,15 @@ pub mod Multiextension {
             pool_key: PoolKey,
             params: SwapParameters,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions, BEFORE_SWAP_BIT_SHIFT, BEFORE_SWAP_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }.before_swap(caller, pool_key, params);
+            }
         }
 
         fn after_swap(
@@ -258,7 +318,15 @@ pub mod Multiextension {
             params: SwapParameters,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions, AFTER_SWAP_BIT_SHIFT, AFTER_SWAP_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }.before_swap(caller, pool_key, params);
+            }
         }
 
         fn before_update_position(
@@ -267,7 +335,18 @@ pub mod Multiextension {
             pool_key: PoolKey,
             params: UpdatePositionParameters,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    BEFORE_UPDATE_POSITION_BIT_SHIFT,
+                    BEFORE_UPDATE_POSITION_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }
+                    .before_update_position(caller, pool_key, params);
+            }
         }
 
         fn after_update_position(
@@ -277,7 +356,18 @@ pub mod Multiextension {
             params: UpdatePositionParameters,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    AFTER_UPDATE_POSITION_BIT_SHIFT,
+                    AFTER_UPDATE_POSITION_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }
+                    .after_update_position(caller, pool_key, params, delta);
+            }
         }
 
         fn before_collect_fees(
@@ -287,7 +377,18 @@ pub mod Multiextension {
             salt: felt252,
             bounds: Bounds,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    BEFORE_COLLECT_FEES_BIT_SHIFT,
+                    BEFORE_COLLECT_FEES_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }
+                    .before_collect_fees(caller, pool_key, salt, bounds);
+            }
         }
 
         fn after_collect_fees(
@@ -298,7 +399,18 @@ pub mod Multiextension {
             bounds: Bounds,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            let mut active_extensions: Felt252Dict<felt252> = Default::default();
+            let extensions_count = self
+                ._get_activated_extensions(
+                    ref active_extensions,
+                    AFTER_COLLECT_FEES_BIT_SHIFT,
+                    AFTER_COLLECT_FEES_QUEUE_BIT_SHIFT,
+                );
+            for index in 0..extensions_count {
+                let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
+                IExtensionDispatcher { contract_address }
+                    .after_collect_fees(caller, pool_key, salt, bounds, delta);
+            }
         }
     }
 }

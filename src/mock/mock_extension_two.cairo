@@ -17,7 +17,8 @@ pub mod MockextensionTwo {
     impl MockextensionTwoImpl of IExtension<ContractState> {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
-        ) {// assert(false, 'Call point not used two');
+        ) {
+            assert(false, 'mock two');
         }
 
         fn after_initialize_pool(

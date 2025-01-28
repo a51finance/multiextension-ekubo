@@ -88,6 +88,13 @@ fn setup() -> (IMultiextensionDispatcher, PoolKey) {
     (multiextension, pool_key)
 }
 
+// #[test]
+// fn temp () {
+//     let active: u256 = 389180780512873979206060336218813876722004499628491695972352;
+//     let extension = active / 0x100000000000000000000000000000000000;
+//     print!("extension = {} ",extension);
+// }
+
 #[test]
 #[fork("mainnet")]
 fn test_init() {
@@ -109,18 +116,39 @@ fn test_init() {
     let (mockExtensionOne, mockExtensionTwo) = (
         deploy_mockextension("MockextensionOne"), deploy_mockextension("MockextensionTwo"),
     );
+
+    // let mcFelt:felt252 = mockExtensionOne.into();
+    // print!("address = {} ",mcFelt);
+
     let extensions = array![
         PacketExtension {
-            extension: mockExtensionOne, extensionQueue: 200, extensionDataDist: 100,
+            extension: mockExtensionTwo, extensionQueue: 200, extensionDataDist: 100,
         },
         PacketExtension {
             extension: mockExtensionTwo, extensionQueue: 200, extensionDataDist: 100,
         },
+        PacketExtension {
+            extension: mockExtensionTwo, extensionQueue: 286331153, extensionDataDist: 100,
+        },
+        PacketExtension {
+            extension: mockExtensionTwo, extensionQueue: 200, extensionDataDist: 100,
+        },
+        PacketExtension {
+            extension: mockExtensionOne, extensionQueue: 1118481, extensionDataDist: 100,
+        },
     ];
 
-    multiextension
-        .init_extensions(extensions, 389180678745591968580628335859831605021785274946596863467520);
+    // 389180678745591968580628335859831605021785274946596863467520
+
+    multiextension.init_extensions(extensions, 196960369429610926656313877409557991465454657536);
+
+    // let ab = multiextension.run_mock();
+    // let cd:felt252 = mockExtensionOne.into();
+
+    // let count = multiextension.mock_function();
+    // print!("count = {} and {}", count.at(0).unwrap(), count.at(1).unwrap());
 
     ekubo_core().initialize_pool(pool_key, i129 { mag: 100, sign: false });
-    // print!("ab = {}",ab);
+    // print!("ab = {}", ab);
+// print!("cd = {}", cd);
 }
