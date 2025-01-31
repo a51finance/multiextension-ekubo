@@ -4,17 +4,16 @@ use ekubo_multiextension::types::packet_extension::PacketExtension;
 pub trait IMultiextension<TContractState> {
     fn init_extensions(
         ref self: TContractState,
-        init_extensions: Array<PacketExtension>,
+        init_extensions: Span<PacketExtension>,
         init_activated_extensions: u256,
     );
     fn change_extensions(
         ref self: TContractState,
-        updated_extensions: Array<PacketExtension>,
+        updated_extensions: Span<PacketExtension>,
         updated_activated_extensions: u256,
     );
     fn accept_new_extensions(ref self: TContractState);
     fn reject_new_extensions(ref self: TContractState);
-    fn get_activated_extensions(self: @TContractState) -> u256;
 }
 
 #[starknet::contract]
@@ -67,6 +66,7 @@ pub mod Multiextension {
         pub extensions: Map<u32, PacketExtension>,
         pub pending_extensions_count: u32,
         pub pending_extensions: Map<u32, PacketExtension>,
+        pub initialized: bool,
         #[substorage(v0)]
         owned: owned_component::Storage,
     }
@@ -90,7 +90,7 @@ pub mod Multiextension {
 
     #[derive(starknet::Event, Drop)]
     #[event]
-    enum Event {
+    pub enum Event {
         ExtensionsUpdated: ExtensionsUpdated,
         NewExtensionsAccepted: NewExtensionsAccepted,
         NewExtensionsRejected: NewExtensionsRejected,
@@ -98,7 +98,7 @@ pub mod Multiextension {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, params: MultiextensionInitParams) {
+    pub fn constructor(ref self: ContractState, params: MultiextensionInitParams) {
         self.core.write(params.core);
         self.timeout.write(params.init_timeout);
         self.initialize_owned(params.owner);
@@ -110,7 +110,7 @@ pub mod Multiextension {
     }
 
     #[generate_trait]
-    impl Internal of InternalTrait {
+    pub impl Internal of InternalTrait {
         fn _set_extensions(
             ref self: ContractState,
             new_extensions: Span<PacketExtension>,
@@ -162,7 +162,9 @@ pub mod Multiextension {
                 let flag_check = 1 * 2_u256.pow(15 - index); //TODO: check gas
                 if ((extension_flags & flag_check) != 0) {
                     let packet = self.extensions.entry(index).read();
-                    let queue_position = get_queue_position(packet.extensionQueue, queue_bit_shift);
+                    let queue_position = get_queue_position(
+                        packet.extension_queue, queue_bit_shift,
+                    );
                     active_extensions.insert(queue_position.into(), packet.extension.into());
                 }
             };
@@ -175,22 +177,26 @@ pub mod Multiextension {
     impl MultiextensionImpl of IMultiextension<ContractState> {
         fn init_extensions(
             ref self: ContractState,
-            init_extensions: Array<PacketExtension>,
+            init_extensions: Span<PacketExtension>,
             init_activated_extensions: u256,
         ) {
-            // self.require_owner();
-            self._set_extensions(init_extensions.span(), self.extensions);
+            self.require_owner();
+            assert(!self.initialized.read(), Errors::ALREADY_INITIALIZED);
+            self._set_extensions(init_extensions, self.extensions);
             self.activated_extensions.write(init_activated_extensions);
             self.extension_count.write(init_extensions.len());
+            self.initialized.write(true);
         }
 
         fn change_extensions(
             ref self: ContractState,
-            updated_extensions: Array<PacketExtension>,
+            updated_extensions: Span<PacketExtension>,
             updated_activated_extensions: u256,
         ) {
             self.require_owner();
-            self._set_extensions(updated_extensions.span(), self.pending_extensions);
+            assert(self.initialized.read(), Errors::NOT_INITIALIZED);
+            assert(self.pending_extensions_count.read() == 0, Errors::CHANGE_PENDING);
+            self._set_extensions(updated_extensions, self.pending_extensions);
             self.pending_activated_extensions.write(updated_activated_extensions);
             self.pending_extensions_count.write(updated_extensions.len());
             let timestamp = get_block_timestamp();
@@ -198,7 +204,7 @@ pub mod Multiextension {
             self
                 .emit(
                     ExtensionsUpdated {
-                        updated_extensions: updated_extensions.span(),
+                        updated_extensions: updated_extensions,
                         updated_activated_extensions,
                         timestamp,
                     },
@@ -214,7 +220,7 @@ pub mod Multiextension {
             let timestamp = get_block_timestamp();
 
             assert(
-                timestamp <= self.change_extensions_timer.read() + self.timeout.read(),
+                timestamp > self.change_extensions_timer.read() + self.timeout.read(),
                 Errors::EXTENSIONS_APPROVAL_TIMEOUT,
             );
 
@@ -246,10 +252,6 @@ pub mod Multiextension {
             self.pending_extensions_count.write(0);
 
             self.emit(NewExtensionsRejected { timestamp });
-        }
-
-        fn get_activated_extensions(self: @ContractState) -> u256 {
-            self.activated_extensions.read()
         }
     }
 

@@ -2,7 +2,7 @@
 pub trait IMockExtension<TContractState> {}
 
 #[starknet::contract]
-pub mod MockextensionTwo {
+pub mod Mockextension {
     use starknet::{ContractAddress};
     use ekubo::interfaces::core::{IExtension, SwapParameters, UpdatePositionParameters};
     use ekubo::types::bounds::{Bounds};
@@ -14,11 +14,11 @@ pub mod MockextensionTwo {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl MockextensionTwoImpl of IExtension<ContractState> {
+    impl MockextensionImpl of IExtension<ContractState> {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            assert(false, 'mock two');
+            assert(false, 'Call point not used');
         }
 
         fn after_initialize_pool(

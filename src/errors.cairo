@@ -1,5 +1,8 @@
 pub mod Errors {
-    pub const MAX_EXTENSIONS_COUNT_EXCEEDED: felt252 = 'max extensions count exceeded';
-    pub const NO_EXTENSIONS_PENDING_APPROVAL: felt252 = 'no extensions pending approval';
-    pub const EXTENSIONS_APPROVAL_TIMEOUT: felt252 = 'extensions approval timeout';
+    pub const MAX_EXTENSIONS_COUNT_EXCEEDED: felt252 = 'MAX_EXTENSIONS_COUNT_EXCEEDED';
+    pub const NO_EXTENSIONS_PENDING_APPROVAL: felt252 = 'NO_EXTENSIONS_PENDING_APPROVAL';
+    pub const EXTENSIONS_APPROVAL_TIMEOUT: felt252 = 'EXTENSIONS_APPROVAL_TIMEOUT';
+    pub const ALREADY_INITIALIZED: felt252 = 'ALREADY_INITIALIZED';
+    pub const CHANGE_PENDING: felt252 = 'CHANGE_PENDING';
+    pub const NOT_INITIALIZED: felt252 = 'NOT_INITIALIZED';
 }
