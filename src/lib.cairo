@@ -7,7 +7,6 @@ pub mod constants;
 
 pub mod errors;
 
-// #[cfg(test)]
 pub mod mock {
     pub mod mock_extension;
     pub mod token;

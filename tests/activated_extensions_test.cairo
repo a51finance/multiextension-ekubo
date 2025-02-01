@@ -20,7 +20,7 @@ use ekubo_multiextension::multiextension::{Multiextension, IMultiextension};
 fn deploy_mock_extension() -> ContractAddress {
     let contract_class = declare("Mockextension").unwrap().contract_class();
     let (contract_address, _) = contract_class
-        .deploy(@array![])
+        .deploy(@array![0_u8.into()])
         .expect('Deploy mockextension failed');
     contract_address
 }
