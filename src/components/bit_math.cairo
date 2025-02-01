@@ -23,7 +23,7 @@ pub enum ExtensionMethod {
     AfterCollectFees,
 }
 
-fn get_method_bit_shift(method: @ExtensionMethod) -> u256 {
+fn get_method_bit_shift(method: ExtensionMethod) -> u256 {
     match method {
         ExtensionMethod::BeforeInitPool => BEFORE_INIT_POOL_BIT_SHIFT,
         ExtensionMethod::AfterInitPool => AFTER_INIT_POOL_BIT_SHIFT,
@@ -36,7 +36,7 @@ fn get_method_bit_shift(method: @ExtensionMethod) -> u256 {
     }
 }
 
-fn get_queue_bit_shift(method: @ExtensionMethod) -> u32 {
+fn get_queue_bit_shift(method: ExtensionMethod) -> u32 {
     match method {
         ExtensionMethod::BeforeInitPool => BEFORE_INIT_POOL_QUEUE_BIT_SHIFT,
         ExtensionMethod::AfterInitPool => AFTER_INIT_POOL_QUEUE_BIT_SHIFT,
@@ -50,11 +50,12 @@ fn get_queue_bit_shift(method: @ExtensionMethod) -> u32 {
 }
 
 pub fn activate_extension(
-    activated_extensions: u256, method: @ExtensionMethod, extension_id: u8, activate: bool,
+    activated_extensions: u256, method: ExtensionMethod, extension_id: u8, activate: bool,
 ) -> u256 {
     assert(extension_id.into() < MAX_EXTENSIONS_COUNT, Errors::MAX_EXTENSIONS_COUNT_EXCEEDED);
     let method_shift = get_method_bit_shift(method);
     let method_bits = (activated_extensions / method_shift) & 0xFFFFF;
+
     let mut method_flags = method_bits & 0x0FFFF;
     let mut method_count = (method_bits / 0x10000) & 0xF;
     let extension_flag = 1 * 2_u256.pow(15 - extension_id.into());
@@ -69,12 +70,13 @@ pub fn activate_extension(
 
     let new_method_count = method_count * 2_u256.pow(16);
     let new_method_bits = new_method_count | method_flags;
-    let new_activated_extensions = ((new_method_bits & ~0xFFFFF) * method_shift)
+
+    let new_activated_extensions = (activated_extensions & ~(0xFFFFF * method_shift))
         | (new_method_bits * method_shift);
     new_activated_extensions
 }
 
-pub fn set_queue_position(queue: u32, method: @ExtensionMethod, position: u8) -> u32 {
+pub fn set_queue_position(queue: u32, method: ExtensionMethod, position: u8) -> u32 {
     assert(position.into() < MAX_EXTENSIONS_COUNT, Errors::MAX_EXTENSIONS_COUNT_EXCEEDED);
     let queue_shift = get_queue_bit_shift(method);
     let mask = 0xF * queue_shift;

@@ -3,28 +3,48 @@ pub trait IMockExtension<TContractState> {}
 
 #[starknet::contract]
 pub mod Mockextension {
+    use starknet::event::EventEmitter;
     use starknet::{ContractAddress};
+    use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
     use ekubo::interfaces::core::{IExtension, SwapParameters, UpdatePositionParameters};
-    use ekubo::types::bounds::{Bounds};
-    use ekubo::types::delta::{Delta};
-    use ekubo::types::i129::{i129};
-    use ekubo::types::keys::{PoolKey};
+    use ekubo::types::bounds::Bounds;
+    use ekubo::types::delta::Delta;
+    use ekubo::types::i129::i129;
+    use ekubo::types::keys::PoolKey;
 
     #[storage]
-    struct Storage {}
+    struct Storage {
+        order: u8
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExtensionOrder {
+        order: u8,
+    }
+
+    #[derive(starknet::Event, Drop)]
+    #[event]
+    pub enum Event {
+        ExtensionOrder: ExtensionOrder,
+    }
+
+    #[constructor]
+    pub fn constructor(ref self: ContractState, order: u8) {
+        self.order.write(order);
+    }
 
     #[abi(embed_v0)]
     impl MockextensionImpl of IExtension<ContractState> {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn after_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn before_swap(
@@ -33,7 +53,7 @@ pub mod Mockextension {
             pool_key: PoolKey,
             params: SwapParameters,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn after_swap(
@@ -43,7 +63,7 @@ pub mod Mockextension {
             params: SwapParameters,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn before_update_position(
@@ -52,7 +72,7 @@ pub mod Mockextension {
             pool_key: PoolKey,
             params: UpdatePositionParameters,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn after_update_position(
@@ -62,7 +82,7 @@ pub mod Mockextension {
             params: UpdatePositionParameters,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn before_collect_fees(
@@ -72,7 +92,7 @@ pub mod Mockextension {
             salt: felt252,
             bounds: Bounds,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
 
         fn after_collect_fees(
@@ -83,7 +103,7 @@ pub mod Mockextension {
             bounds: Bounds,
             delta: Delta,
         ) {
-            assert(false, 'Call point not used');
+            self.emit(ExtensionOrder {order:self.order.read()});
         }
     }
 }

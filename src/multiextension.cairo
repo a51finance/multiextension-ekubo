@@ -18,8 +18,8 @@ pub trait IMultiextension<TContractState> {
 
 #[starknet::contract]
 pub mod Multiextension {
-    use core::num::traits::{Pow};
-    use core::dict::{Felt252Dict};
+    use core::num::traits::Pow;
+    use core::dict::Felt252Dict;
     use starknet::event::EventEmitter;
     use starknet::{ContractAddress, get_block_timestamp, contract_address_const};
     use starknet::storage::{
@@ -31,11 +31,11 @@ pub mod Multiextension {
         ICoreDispatcher, ICoreDispatcherTrait, IExtension, IExtensionDispatcher,
         IExtensionDispatcherTrait, SwapParameters, UpdatePositionParameters,
     };
-    use ekubo::types::bounds::{Bounds};
-    use ekubo::types::call_points::{CallPoints};
-    use ekubo::types::delta::{Delta};
-    use ekubo::types::i129::{i129};
-    use ekubo::types::keys::{PoolKey};
+    use ekubo::types::bounds::Bounds;
+    use ekubo::types::call_points::CallPoints;
+    use ekubo::types::delta::Delta;
+    use ekubo::types::i129::i129;
+    use ekubo::types::keys::PoolKey;
     use ekubo_multiextension::types::init_params::MultiextensionInitParams;
     use ekubo_multiextension::errors::Errors;
     use ekubo_multiextension::constants::{
@@ -159,7 +159,7 @@ pub mod Multiextension {
             };
 
             for index in 0..self.extension_count.read() {
-                let flag_check = 1 * 2_u256.pow(15 - index); //TODO: check gas
+                let flag_check = 1 * 2_u256.pow(15 - index);
                 if ((extension_flags & flag_check) != 0) {
                     let packet = self.extensions.entry(index).read();
                     let queue_position = get_queue_position(

@@ -7,15 +7,15 @@ use ekubo_multiextension::types::packet_extension::PacketExtension;
 
 #[derive(Drop, Copy)]
 pub struct ExtMethodStruct {
-    method: ExtensionMethod,
-    position: u8,
-    activate: bool,
+    pub method: ExtensionMethod,
+    pub position: u8,
+    pub activate: bool,
 }
 
 #[derive(Drop, Copy)]
 pub struct ExtStruct {
-    extension: ContractAddress,
-    methods: Span<ExtMethodStruct>,
+    pub extension: ContractAddress,
+    pub methods: Span<ExtMethodStruct>,
 }
 
 pub fn generate_activated_extensions(
@@ -28,15 +28,13 @@ pub fn generate_activated_extensions(
         new_activated_extensions =
             activate_extension(
                 new_activated_extensions,
-                @method_wrapper.method,
+                method_wrapper.method,
                 extension_id,
                 method_wrapper.activate,
             );
         if method_wrapper.activate {
             extension_queue =
-                set_queue_position(
-                    extension_queue, @method_wrapper.method, method_wrapper.position,
-                );
+                set_queue_position(extension_queue, method_wrapper.method, method_wrapper.position);
         }
     };
     (new_activated_extensions, extension_queue)
