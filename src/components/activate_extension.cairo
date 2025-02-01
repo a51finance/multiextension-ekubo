@@ -18,6 +18,9 @@ pub struct ExtStruct {
     pub methods: Span<ExtMethodStruct>,
 }
 
+//add extension with methods in activated extensions
+//return the updated activated extensions along with extension queue which have the order
+//in which each method will be called 
 pub fn generate_activated_extensions(
     activated_extensions: u256, methods: Span<ExtMethodStruct>, extension_id: u8,
 ) -> (u256, u32) {
@@ -40,6 +43,7 @@ pub fn generate_activated_extensions(
     (new_activated_extensions, extension_queue)
 }
 
+//generate packet extensions
 pub fn generate_extension_data(extensions: Span<ExtStruct>) -> (u256, Array<PacketExtension>) {
     let mut activated_extensions = 0_u256;
     let mut packet_extensions: Array<PacketExtension> = array![];
