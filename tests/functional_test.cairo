@@ -35,10 +35,10 @@ fn deploy_multiextension(params: MultiextensionInitParams) -> IMultiextensionDis
 
 fn deploy_mock_extensions(count: u8) -> Array<PacketExtension> {
     let mut mock_extensions: Array<PacketExtension> = array![];
-    for _ in 0..count {
+    for index in 0..count {
         let contract_class = declare("Mockextension").unwrap().contract_class();
         let (contract_address, _) = contract_class
-        .deploy(@array![])
+        .deploy(@array![index.into()])
         .expect('Deploy mockextension failed');
         mock_extensions.append(PacketExtension { extension: contract_address, extension_queue: 0 })
     };
