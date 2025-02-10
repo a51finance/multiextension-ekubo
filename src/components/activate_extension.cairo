@@ -20,7 +20,7 @@ pub struct ExtStruct {
 
 //add extension with methods in activated extensions
 //return the updated activated extensions along with extension queue which have the order
-//in which each method will be called 
+//in which each method will be called
 pub fn generate_activated_extensions(
     activated_extensions: u256, methods: Span<ExtMethodStruct>, extension_id: u8,
 ) -> (u256, u32) {

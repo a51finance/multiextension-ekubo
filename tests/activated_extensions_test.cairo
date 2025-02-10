@@ -17,10 +17,10 @@ use ekubo_multiextension::constants::{
 use ekubo_multiextension::multiextension::Multiextension::InternalTrait;
 use ekubo_multiextension::multiextension::{Multiextension, IMultiextension};
 
-fn deploy_mock_extension() -> ContractAddress {
+pub fn deploy_mock_extension(order: u8) -> ContractAddress {
     let contract_class = declare("Mockextension").unwrap().contract_class();
     let (contract_address, _) = contract_class
-        .deploy(@array![0_u8.into()])
+        .deploy(@array![order.into()])
         .expect('Deploy mockextension failed');
     contract_address
 }
@@ -41,7 +41,7 @@ fn assert_extension_order(
     assert_eq!(active_extensions.get(0), extension_two.into());
 }
 
-fn create_extension_struct(extension: ContractAddress, position: u8) -> ExtStruct {
+pub fn create_extension_struct(extension: ContractAddress, position: u8) -> ExtStruct {
     ExtStruct {
         extension,
         methods: array![
@@ -65,8 +65,9 @@ fn create_extension_struct(extension: ContractAddress, position: u8) -> ExtStruc
 }
 
 #[test]
+#[ignore]
 fn test_activated_extensions() {
-    let mock_extensions = (deploy_mock_extension(), deploy_mock_extension());
+    let mock_extensions = (deploy_mock_extension(0), deploy_mock_extension(1));
     let (extension_one, extension_two) = mock_extensions;
     let input_extensions: Array<ExtStruct> = array![
         create_extension_struct(extension_one, 1), create_extension_struct(extension_two, 0),

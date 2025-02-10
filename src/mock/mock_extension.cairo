@@ -1,9 +1,11 @@
 #[starknet::interface]
-pub trait IMockExtension<TContractState> {}
+pub trait IMockExtension<TContractState> {
+    fn get_before_execute(self: @TContractState) -> u8;
+    fn get_after_execute(self: @TContractState) -> u8;
+}
 
 #[starknet::contract]
 pub mod Mockextension {
-    use starknet::event::EventEmitter;
     use starknet::{ContractAddress};
     use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
     use ekubo::interfaces::core::{IExtension, SwapParameters, UpdatePositionParameters};
@@ -12,20 +14,13 @@ pub mod Mockextension {
     use ekubo::types::i129::i129;
     use ekubo::types::keys::PoolKey;
 
+    use super::IMockExtension;
+
     #[storage]
     struct Storage {
-        order: u8
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct ExtensionOrder {
         order: u8,
-    }
-
-    #[derive(starknet::Event, Drop)]
-    #[event]
-    pub enum Event {
-        ExtensionOrder: ExtensionOrder,
+        before_execute: u8,
+        after_execute: u8,
     }
 
     #[constructor]
@@ -34,17 +29,28 @@ pub mod Mockextension {
     }
 
     #[abi(embed_v0)]
+    impl MockextensionNativeImpl of IMockExtension<ContractState> {
+        fn get_before_execute(self: @ContractState) -> u8 {
+            self.before_execute.read()
+        }
+
+        fn get_after_execute(self: @ContractState) -> u8 {
+            self.after_execute.read()
+        }
+    }
+
+    #[abi(embed_v0)]
     impl MockextensionImpl of IExtension<ContractState> {
         fn before_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.before_execute.write(self.order.read());
         }
 
         fn after_initialize_pool(
             ref self: ContractState, caller: ContractAddress, pool_key: PoolKey, initial_tick: i129,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.after_execute.write(self.order.read());
         }
 
         fn before_swap(
@@ -53,7 +59,7 @@ pub mod Mockextension {
             pool_key: PoolKey,
             params: SwapParameters,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.before_execute.write(self.order.read() + 10);
         }
 
         fn after_swap(
@@ -63,7 +69,7 @@ pub mod Mockextension {
             params: SwapParameters,
             delta: Delta,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.after_execute.write(self.order.read() + 10);
         }
 
         fn before_update_position(
@@ -72,7 +78,7 @@ pub mod Mockextension {
             pool_key: PoolKey,
             params: UpdatePositionParameters,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.before_execute.write(self.order.read());
         }
 
         fn after_update_position(
@@ -82,7 +88,7 @@ pub mod Mockextension {
             params: UpdatePositionParameters,
             delta: Delta,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.after_execute.write(self.order.read());
         }
 
         fn before_collect_fees(
@@ -92,7 +98,7 @@ pub mod Mockextension {
             salt: felt252,
             bounds: Bounds,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.before_execute.write(self.order.read());
         }
 
         fn after_collect_fees(
@@ -103,7 +109,7 @@ pub mod Mockextension {
             bounds: Bounds,
             delta: Delta,
         ) {
-            self.emit(ExtensionOrder {order:self.order.read()});
+            self.after_execute.write(self.order.read());
         }
     }
 }

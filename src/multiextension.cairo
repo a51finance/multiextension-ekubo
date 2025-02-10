@@ -68,7 +68,7 @@ pub mod Multiextension {
         pub activated_extensions: u256,
         //timestamp when extension change was set
         pub change_extensions_timer: u64,
-        //pending value for active extensions 
+        //pending value for active extensions
         pub pending_activated_extensions: u256,
         //timelock threshold
         pub timeout: u64,
@@ -80,7 +80,7 @@ pub mod Multiextension {
         pub pending_extensions_count: u32,
         //pending value of extensions mapping
         pub pending_extensions: Map<u32, PacketExtension>,
-        //boolean to maintain contract init status 
+        //boolean to maintain contract init status
         pub initialized: bool,
         #[substorage(v0)]
         owned: owned_component::Storage,
@@ -185,7 +185,8 @@ pub mod Multiextension {
             //get the first 4 bits for count from 20 bits of method
             //here count represent how many extensions are enabled for called method
             let extension_count: u8 = ((extension_info / 0x10000) & 0xF).try_into().unwrap();
-            //the rest 16 bits for representing which extensions are actually enabled for called method
+            //the rest 16 bits for representing which extensions are actually enabled for called
+            //method
             let extension_flags = extension_info & 0x0FFFF;
 
             //loop through all stored extensions
@@ -228,10 +229,7 @@ pub mod Multiextension {
             self.initialized.write(true);
             self
                 .emit(
-                    ExtensionsInit {
-                        init_extensions: init_extensions,
-                        init_activated_extensions,
-                    },
+                    ExtensionsInit { init_extensions: init_extensions, init_activated_extensions },
                 );
         }
 
@@ -397,7 +395,7 @@ pub mod Multiextension {
             //call each active extension
             for index in 0..extensions_count {
                 let contract_address = (active_extensions.get(index.into())).try_into().unwrap();
-                IExtensionDispatcher { contract_address }.before_swap(caller, pool_key, params);
+                IExtensionDispatcher { contract_address }.after_swap(caller, pool_key, params, delta);
             }
         }
 

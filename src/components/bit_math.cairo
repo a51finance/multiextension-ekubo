@@ -75,8 +75,7 @@ pub fn activate_extension(
     if activate {
         method_flags = method_flags | extension_flag;
         method_count += 1;
-    }
-    // to deactivate make the flag of that bit 0 and decrement the count
+    } // to deactivate make the flag of that bit 0 and decrement the count
     else {
         method_flags = method_flags & ~extension_flag;
         method_count -= 1;
@@ -90,15 +89,15 @@ pub fn activate_extension(
     // update the activated extensions
     let new_activated_extensions = (activated_extensions & ~(0xFFFFF * method_shift))
         | (new_method_bits * method_shift);
-    
+
     new_activated_extensions
 }
 
 //set the order in which method should called on an extension
 pub fn set_queue_position(queue: u32, method: ExtensionMethod, position: u8) -> u32 {
-     //extension id should be less tha MAX_EXTENSIONS_COUNT
+    //extension id should be less tha MAX_EXTENSIONS_COUNT
     assert(position.into() < MAX_EXTENSIONS_COUNT, Errors::MAX_EXTENSIONS_COUNT_EXCEEDED);
-     //get shift for provided method
+    //get shift for provided method
     let queue_shift = get_queue_bit_shift(method);
 
     //clear method order bits with NOT of mask
