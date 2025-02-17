@@ -78,7 +78,7 @@ pub mod Mockextension {
             pool_key: PoolKey,
             params: UpdatePositionParameters,
         ) {
-            self.before_execute.write(self.order.read());
+            self.before_execute.write(self.order.read() + 10);
         }
 
         fn after_update_position(
@@ -88,7 +88,7 @@ pub mod Mockextension {
             params: UpdatePositionParameters,
             delta: Delta,
         ) {
-            self.after_execute.write(self.order.read());
+            self.after_execute.write(self.order.read() + 10);
         }
 
         fn before_collect_fees(

@@ -171,11 +171,11 @@ fn test_position_update() {
             0,
         );
 
-    assert_eq!(mock_one.get_before_execute(), 1);
-    assert_eq!(mock_one.get_after_execute(), 1);
+    assert_eq!(mock_one.get_before_execute(), 11);
+    assert_eq!(mock_one.get_after_execute(), 11);
 
-    assert_eq!(mock_two.get_before_execute(), 2);
-    assert_eq!(mock_two.get_after_execute(), 2);
+    assert_eq!(mock_two.get_before_execute(), 12);
+    assert_eq!(mock_two.get_after_execute(), 12);
 }
 
 #[test]

@@ -65,7 +65,6 @@ pub fn create_extension_struct(extension: ContractAddress, position: u8) -> ExtS
 }
 
 #[test]
-#[ignore]
 fn test_activated_extensions() {
     let mock_extensions = (deploy_mock_extension(0), deploy_mock_extension(1));
     let (extension_one, extension_two) = mock_extensions;
